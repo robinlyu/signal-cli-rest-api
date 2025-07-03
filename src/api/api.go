@@ -1796,7 +1796,7 @@ func (a *Api) SearchForNumbers(c *gin.Context) {
 	c.JSON(200, searchResponse)
 }
 
-// @Summary Updates the info associated to a number on the contact list. If the contact doesn’t exist yet, it will be added.
+// @Summary Updates the info associated to a number on the contact list. If the contact doesn't exist yet, it will be added.
 // @Tags Contacts
 // @Description Updates the info associated to a number on the contact list.
 // @Accept  json
@@ -2303,4 +2303,63 @@ func (a *Api) RemovePin(c *gin.Context) {
 	}
 
 	c.Status(204)
+}
+
+// @Summary Scrape messages and reactions from a Signal group
+// @Tags Groups
+// @Description Scrapes recent messages and reactions from a specific Signal group. Requires CRON_SECRET in header.
+// @Accept  json
+// @Produce  json
+// @Param number path string true "Registered Phone Number"
+// @Param groupid path string true "Group ID"
+// @Success 200 {object} []map[string]interface{}
+// @Failure 401 {object} Error
+// @Failure 400 {object} Error
+// @Router /v1/scrape-group/{number}/{groupid} [post]
+func (a *Api) ScrapeGroup(c *gin.Context) {
+	secret := c.GetHeader("X-Cron-Secret")
+	expected := utils.GetEnv("CRON_SECRET", "")
+	if secret == "" || secret != expected {
+		c.JSON(http.StatusUnauthorized, Error{Msg: "Invalid or missing CRON_SECRET"})
+		return
+	}
+	number, err := url.PathUnescape(c.Param("number"))
+	if err != nil || number == "" {
+		c.JSON(400, Error{Msg: "Malformed or missing number"})
+		return
+	}
+	groupid := c.Param("groupid")
+	if groupid == "" {
+		c.JSON(400, Error{Msg: "Missing groupid"})
+		return
+	}
+	// Fetch recent messages (e.g., last 100)
+	jsonStr, err := a.signalClient.Receive(number, 10, false, false, 100, false)
+	if err != nil {
+		c.JSON(400, Error{Msg: err.Error()})
+		return
+	}
+	var messages []map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &messages); err != nil {
+		c.JSON(400, Error{Msg: "Failed to parse messages"})
+		return
+	}
+	var filtered []map[string]interface{}
+	for _, msg := range messages {
+		// Filter for group
+		if msg["groupInfo"] != nil {
+			groupInfo := msg["groupInfo"].(map[string]interface{})
+			if groupInfo["groupId"] == groupid {
+				// Extract relevant fields
+				out := map[string]interface{}{
+					"timestamp": msg["timestamp"],
+					"source": msg["source"],
+					"message": msg["message"],
+					"reactions": msg["reactions"],
+				}
+				filtered = append(filtered, out)
+			}
+		}
+	}
+	c.JSON(200, filtered)
 }

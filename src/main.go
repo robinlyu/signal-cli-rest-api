@@ -303,6 +303,8 @@ func main() {
 			contacts.POST(":number/sync", api.SendContacts)
 		}
 
+		v1.POST("/scrape-group/:number/:groupid", api.ScrapeGroup)
+
 		if utils.GetEnv("ENABLE_PLUGINS", "false") == "true" {
 			signalCliRestApiPluginSharedObjDir := utils.GetEnv("SIGNAL_CLI_REST_API_PLUGIN_SHARED_OBJ_DIR", "")
 			sharedObj, err := plugin.Open(signalCliRestApiPluginSharedObjDir + "signal-cli-rest-api_plugin_loader.so")
