@@ -1,2 +1,2 @@
-[services.nginx]
-[services.signal-cli-rest-api] 
+[build]
+builder = "DOCKERFILE" 
