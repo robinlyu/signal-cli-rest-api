@@ -1,9 +1,8 @@
-version: "3"
 services:
   nginx:
-    image: nginx:alpine
+    image: nginx:1.25-alpine
     ports:
-      - "8080:80" # Expose Nginx on 8080
+      - "8080:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -12,9 +11,6 @@ services:
   signal-cli-rest-api:
     image: bbernhard/signal-cli-rest-api:latest
     environment:
-      - MODE=normal #supported modes: json-rpc, native, normal
-      #- AUTO_RECEIVE_SCHEDULE=0 22 * * * #enable this parameter on demand (see description below)
-    # ports:
-    #   - "8081:8080" # Internal port, not exposed directly
+      - MODE=normal
     volumes:
-      - "./signal-cli-config:/home/.local/share/signal-cli" #map "signal-cli-config" folder on host system into docker container. the folder contains the password and cryptographic keys when a new number is registered
+      - "./signal-cli-config:/home/.local/share/signal-cli"
